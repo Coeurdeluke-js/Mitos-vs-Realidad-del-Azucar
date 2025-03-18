@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mitos vs. Realidad del Azúcar</title>
+    <link rel="icon" href="logo.ico" type="image/x-icon">
+    
+    <style>
+        body {
+            font-family: 'Exo 2', sans-serif;
+            background-color: #121212;
+            color: #fafafa;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        header {
+            text-align: center;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin-bottom: 5px;
+            color: #ec4d58;
+        }
+
+        /* Icosahedron container styles */
+        #dado-container {
+            perspective: 1200px;
+            margin: 50px 0;
+            width: 300px;
+            height: 300px;
+            position: relative;
+        }
+
+        #dado {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.2s;
+            cursor: grab;
+        }
+
+        #dado:active {
+            cursor: grabbing;
+        }
+
+        .cara {
+            position: absolute;
+            backface-visibility: visible;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #121212;
+            opacity: 0.9;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: background-color 0.3s;
+            background-color: #fafafa !important; /* Force white background */
+            transform-origin: center;
+        }
+
+        .cara:hover {
+            background-color: #ec4d58 !important; /* Red on hover */
+        }
+
+        .cara-numero {
+            position: absolute;
+            text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+        }
+
+        /* Modal styles */
+        #modal-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            padding: 20px;
+        }
+
+        #modal {
+            background-color: #fafafa;
+            color: #121212;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            padding: 20px;
+        }
+
+        .modal-title {
+            text-align: center;
+            color: #ec4d58;
+            margin-top: 0;
+            border-bottom: 2px solid #ec4d58;
+            padding-bottom: 10px;
+        }
+
+        .content-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .content-box {
+            background-color: #f0f0f0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .content-header {
+            background-color: #ec4d58;
+            color: white;
+            font-weight: bold;
+            padding: 10px 15px;
+        }
+
+        .content-body {
+            padding: 15px;
+            color: #333;
+        }
+
+        #modal-close {
+            margin-top: 20px;
+            background-color: #ec4d58;
+            color: #fafafa;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: 'Exo 2', sans-serif;
+            font-size: 1em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.3s;
+        }
+
+        #modal-close:hover {
+            background-color: #d43b47;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        footer {
+            margin-top: 30px;
+            padding: 15px;
+            text-align: center;
+            font-size: 0.9em;
+            color: #888;
+        }
+
+        /* Responsive styling */
+        @media (max-width: 768px) {
+            #dado-container {
+                width: 250px;
+                height: 250px;
+            }
+            
+            #modal {
+                width: 95%;
+                padding: 15px;
+            }
+            
+            .content-container {
+                gap: 15px;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <h1>Mitos vs. Realidad del Azúcar</h1>
+        <p>Gira el dado y haz clic en un número para explorar los mitos y realidades</p>
+    </header>
+    
+    <div id="dado-container">
+        <div id="dado"></div>
+    </div>
+    
+    <div id="modal-container" class="hidden">
+        <div id="modal"></div>
+        <button id="modal-close">
+            <i class="fas fa-times"></i> Cerrar
+        </button>
+    </div>
+    
+    <footer>
+        <p>Proyecto educativo sobre nutrición y azúcar</p>
+    </footer>
+    
+    <script>
+        // Data for myths and realities
+        const mitos = [
+            { nombre: "Mito 1", contenido: "El azúcar causa hiperactividad en los niños." },
+            { nombre: "Mito 2", contenido: "El azúcar moreno es más saludable que el azúcar blanco." },
+            { nombre: "Mito 3", contenido: "El azúcar es adictivo como las drogas." },
+            { nombre: "Mito 4", contenido: "Los sustitutos del azúcar son siempre mejores." },
+            { nombre: "Mito 5", contenido: "El azúcar causa diabetes directamente." },
+            { nombre: "Mito 6", contenido: "El azúcar en la fruta es diferente al azúcar de mesa." },
+            { nombre: "Mito 7", contenido: "Los jugos naturales son saludables sin importar su contenido de azúcar." },
+            { nombre: "Mito 8", contenido: "Los productos 'sin azúcar añadido' son siempre saludables." },
+            { nombre: "Mito 9", contenido: "El azúcar causa cáncer directamente." },
+            { nombre: "Mito 10", contenido: "Eliminar completamente el azúcar es necesario para una dieta saludable." }
+        ];
+
+        const realidades = [
+            { nombre: "Realidad 1", contenido: "Estudios científicos no han encontrado evidencia de este mito popular. Si bien el azúcar proporciona energía rápida, no causa hiperactividad." },
+            { nombre: "Realidad 2", contenido: "La diferencia nutricional es mínima. Ambos son sacarosa, aunque el azúcar moreno contiene trazas de melaza." },
+            { nombre: "Realidad 3", contenido: "Aunque el azúcar activa centros de placer en el cerebro, no cumple criterios de adicción como las sustancias realmente adictivas." },
+            { nombre: "Realidad 4", contenido: "Algunos edulcorantes artificiales pueden tener sus propios efectos secundarios y no siempre son la opción más saludable." },
+            { nombre: "Realidad 5", contenido: "La diabetes es una enfermedad compleja relacionada con múltiples factores, incluyendo la genética y el estilo de vida. El consumo excesivo de azúcar puede aumentar el riesgo de diabetes tipo 2, pero no es la única causa." },
+            { nombre: "Realidad 6", contenido: "Químicamente es igual (sacarosa, fructosa, glucosa). La diferencia está en los nutrientes y la fibra que acompañan al azúcar en la fruta." },
+            { nombre: "Realidad 7", contenido: "Muchos jugos contienen tanto azúcar como los refrescos y carecen de la fibra de la fruta entera." },
+            { nombre: "Realidad 8", contenido: "Pueden contener azúcares naturales (como fructosa) o sustitutos del azúcar, que también deben consumirse con moderación." },
+            { nombre: "Realidad 9", contenido: "La relación es indirecta, a través del sobrepeso y la obesidad, que pueden aumentar el riesgo de ciertos tipos de cáncer." },
+            { nombre: "Realidad 10", contenido: "La moderación es clave. El cuerpo necesita glucosa para funcionar, pero el exceso de azúcar es perjudicial." }
+        ];
+
+        // Variables for rotation
+        let angleX = 0;
+        let angleY = 0;
+        let isDragging = false;
+        let startX, startY;
+        let rotationInertia = { x: 0, y: 0 };
+        let animationFrameId;
+
+        // Create a proper icosahedron
+        function crearDado() {
+            const dado = document.getElementById('dado');
+            dado.innerHTML = '';
+            
+            // Constants for icosahedron generation
+            const phi = (1 + Math.sqrt(5)) / 2; // Golden ratio
+            const scale = 120; // Scale for better visualization
+            
+            // Create the 12 vertices of a regular icosahedron
+            const vertices = [
+                [-1, 0, phi], [1, 0, phi], [-1, 0, -phi], [1, 0, -phi],
+                [0, phi, 1], [0, phi, -1], [0, -phi, 1], [0, -phi, -1],
+                [phi, 1, 0], [phi, -1, 0], [-phi, 1, 0], [-phi, -1, 0]
+            ].map(v => v.map(coord => coord * scale / Math.sqrt(1 + phi * phi)));
+            
+            // Define the 20 faces of the icosahedron (triangles)
+            const faces = [
+                [0, 4, 1], [0, 1, 6], [1, 4, 8], [1, 8, 9], [1, 9, 6],
+                [0, 6, 11], [0, 11, 10], [0, 10, 4], [4, 10, 5], [4, 5, 8],
+                [8, 5, 3], [8, 3, 9], [9, 3, 7], [9, 7, 6], [6, 7, 11],
+                [11, 7, 2], [11, 2, 10], [10, 2, 5], [5, 2, 3], [3, 2, 7]
+            ];
+            
+            // Create each face as a triangular div
+            faces.forEach((face, index) => {
+                const [a, b, c] = face;
+                
+                // Get vertices for this face
+                const v1 = vertices[a];
+                const v2 = vertices[b];
+                const v3 = vertices[c];
+                
+                // Calculate face center
+                const centerX = (v1[0] + v2[0] + v3[0]) / 3;
+                const centerY = (v1[1] + v2[1] + v3[1]) / 3;
+                const centerZ = (v1[2] + v2[2] + v3[2]) / 3;
+                
+                // Calculate normal vector for proper orientation
+                const normal = calculateNormal(v1, v2, v3);
+                
+                // Create face element
+                const cara = document.createElement('div');
+                cara.classList.add('cara');
+                
+                // Calculate size for the triangular face
+                const side1 = Math.sqrt(
+                    Math.pow(v2[0] - v1[0], 2) + 
+                    Math.pow(v2[1] - v1[1], 2) + 
+                    Math.pow(v2[2] - v1[2], 2)
+                );
+                
+                // Set face properties
+                cara.style.width = `${side1 * 0.95}px`;
+                cara.style.height = `${side1 * 0.95}px`;
+                cara.style.clipPath = 'polygon(50% 0%, 0% 100%, 100% 100%)';
+                
+                // Position and orient the face in 3D space
+                // We need to align the normal vector with the Z axis
+                const normalLength = Math.sqrt(
+                    normal[0] * normal[0] + 
+                    normal[1] * normal[1] + 
+                    normal[2] * normal[2]
+                );
+                
+                const normalizedNormal = normal.map(n => n / normalLength);
+                
+                // Calculate rotation angles to align with normal
+                let rotX, rotY, rotZ;
+                
+                // Calculate rotation to align with normal
+                rotX = Math.atan2(normalizedNormal[1], normalizedNormal[2]) * (180 / Math.PI);
+                rotY = Math.atan2(-normalizedNormal[0], Math.sqrt(normalizedNormal[1] * normalizedNormal[1] + normalizedNormal[2] * normalizedNormal[2])) * (180 / Math.PI);
+                
+                // Apply transformation
+                cara.style.transform = `
+                    translate3d(${centerX}px, ${centerY}px, ${centerZ}px)
+                    rotateY(${rotY}deg)
+                    rotateX(${rotX}deg)
+                    rotateZ(0deg)
+                    translate3d(-50%, -50%, 0)
+                `;
+                
+                // Add number label
+                const numero = document.createElement('div');
+                numero.classList.add('cara-numero');
+                numero.textContent = (index + 1).toString();
+                cara.appendChild(numero);
+                
+                // Add click event
+                cara.addEventListener('click', () => {
+                    showModal(index + 1);
+                });
+                
+                dado.appendChild(cara);
+            });
+        }
+        
+        // Calculate normal vector of a triangle
+        function calculateNormal(v1, v2, v3) {
+            // Calculate two edges of the triangle
+            const edge1 = [v2[0] - v1[0], v2[1] - v1[1], v2[2] - v1[2]];
+            const edge2 = [v3[0] - v1[0], v3[1] - v1[1], v3[2] - v1[2]];
+            
+            // Cross product to get normal vector
+            return [
+                edge1[1] * edge2[2] - edge1[2] * edge2[1],
+                edge1[2] * edge2[0] - edge1[0] * edge2[2],
+                edge1[0] * edge2[1] - edge1[1] * edge2[0]
+            ];
+        }
+
+        // Show modal with myth and reality information
+        function showModal(faceNumber) {
+            const modal = document.getElementById('modal');
+            const modalContainer = document.getElementById('modal-container');
+            
+            // Determine which myth and reality to show
+            let mitoIndex, realidadIndex;
+            
+            if (faceNumber <= 10) {
+                mitoIndex = faceNumber - 1;
+                realidadIndex = mitoIndex;
+            } else {
+                mitoIndex = faceNumber - 11;
+                if (mitoIndex >= mitos.length) {
+                    mitoIndex = mitoIndex % mitos.length;
+                }
+                realidadIndex = mitoIndex;
+            }
+            
+            const mito = mitos[mitoIndex];
+            const realidad = realidades[realidadIndex];
+            
+            // Create content for modal
+            modal.innerHTML = `
+                <h2 class="modal-title">Face #${faceNumber}</h2>
+                <div class="content-container">
+                    <div class="content-box">
+                        <div class="content-header">
+                            ${mito.nombre}
+                        </div>
+                        <div class="content-body">
+                            <p>${mito.contenido}</p>
+                        </div>
+                    </div>
+                    <div class="content-box">
+                        <div class="content-header">
+                            ${realidad.nombre}
+                        </div>
+                        <div class="content-body">
+                            <p>${realidad.contenido}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Show modal
+            modalContainer.classList.remove('hidden');
+        }
+
+        // Close modal event
+        document.getElementById('modal-close').addEventListener('click', () => {
+            document.getElementById('modal-container').classList.add('hidden');
+        });
+
+        // Get the die element
+        const dado = document.getElementById('dado');
+
+        // Mouse events for rotation
+        dado.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            rotationInertia = { x: 0, y: 0 };
+            cancelAnimationFrame(animationFrameId);
+            e.preventDefault();
+            dado.style.cursor = 'grabbing';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            
+            // Calculate rotation based on mouse movement
+            rotationInertia.x = deltaY * 0.5;
+            rotationInertia.y = deltaX * 0.5;
+            
+            angleX += deltaY * 0.5;
+            angleY += deltaX * 0.5;
+            
+            updateDieRotation();
+            
+            startX = e.clientX;
+            startY = e.clientY;
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                // Apply inertia effect
+                animateInertia();
+            }
+            isDragging = false;
+            dado.style.cursor = 'grab';
+        });
+
+        // Touch events for mobile
+        dado.addEventListener('touchstart', (e) => {
+            isDragging = true;
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            rotationInertia = { x: 0, y: 0 };
+            cancelAnimationFrame(animationFrameId);
+            e.preventDefault();
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            
+            const deltaX = e.touches[0].clientX - startX;
+            const deltaY = e.touches[0].clientY - startY;
+            
+            rotationInertia.x = deltaY * 0.5;
+            rotationInertia.y = deltaX * 0.5;
+            
+            angleX += deltaY * 0.5;
+            angleY += deltaX * 0.5;
+            
+            updateDieRotation();
+            
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            
+            e.preventDefault();
+        });
+
+        document.addEventListener('touchend', () => {
+            if (isDragging) {
+                animateInertia();
+            }
+            isDragging = false;
+        });
+
+        // Update die rotation
+        function updateDieRotation() {
+            dado.style.transform = `rotateX(${angleX}deg) rotateY(${angleY}deg)`;
+        }
+
+        // Add inertia animation for smooth rotation
+        function animateInertia() {
+            // Slow down the rotation gradually
+            rotationInertia.x *= 0.95;
+            rotationInertia.y *= 0.95;
+            
+            angleX += rotationInertia.x;
+            angleY += rotationInertia.y;
+            
+            updateDieRotation();
+            
+            // Continue animation until almost stopped
+            if (Math.abs(rotationInertia.x) > 0.01 || Math.abs(rotationInertia.y) > 0.01) {
+                animationFrameId = requestAnimationFrame(animateInertia);
+            }
+        }
+
+        // Set initial rotation for better visibility
+        angleX = 20;
+        angleY = 30;
+        updateDieRotation();
+
+        // Create the die when page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            crearDado();
+        });
+
+        // Also create immediately for faster loading
+        crearDado();
+    </script>
+</body>
+</html>
