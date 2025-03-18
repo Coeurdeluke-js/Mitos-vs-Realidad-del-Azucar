@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mitos vs. Realidad del Azúcar</title>
     <link rel="icon" href="logo.ico" type="image/x-icon">
-    
     <style>
         body {
             font-family: 'Exo 2', sans-serif;
@@ -34,55 +33,25 @@
 
         /* Icosahedron container styles */
         #dado-container {
-            perspective: 1200px;
-            margin: 50px 0;
-            width: 300px;
-            height: 300px;
+            width: 600px; /* Increased size */
+            height: 600px; /* Increased size */
             position: relative;
         }
 
-        #dado {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            transform-style: preserve-3d;
-            transition: transform 0.2s;
-            cursor: grab;
+        canvas {
+            display: block;
         }
 
-        #dado:active {
-            cursor: grabbing;
-        }
-
-        .cara {
-            position: absolute;
-            backface-visibility: visible;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #121212;
-            opacity: 0.9;
-            cursor: pointer;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            transition: background-color 0.3s;
-            background-color: #fafafa !important; /* Force white background */
-            transform-origin: center;
-        }
-
-        .cara:hover {
-            background-color: #ec4d58 !important; /* Red on hover */
-        }
-
-        .cara-numero {
-            position: absolute;
-            text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
-            pointer-events: none;
+        /* Instructions */
+        .instructions {
+            margin-top: 15px;
+            text-align: center;
+            font-style: italic;
+            color: #aaa;
         }
 
         /* Modal styles */
-        #modal-container {
+        #modal-container, #welcome-modal-container {
             position: fixed;
             top: 0;
             left: 0;
@@ -97,7 +66,7 @@
             padding: 20px;
         }
 
-        #modal {
+        #modal, #welcome-modal {
             background-color: #fafafa;
             color: #121212;
             width: 90%;
@@ -107,6 +76,31 @@
             border-radius: 10px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
             padding: 20px;
+        }
+
+        #welcome-modal {
+            text-align: center;
+            animation: fadeIn 1.5s ease-in-out;
+        }
+
+        #welcome-title {
+            font-family: 'Exo 2', sans-serif;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+        }
+
+        #welcome-title span {
+            color: #ec4d58;
+        }
+
+        #logo-container {
+            margin: 20px 0;
+            animation: fadeIn 2s ease-in-out;
+        }
+
+        #logo-container img {
+            max-width: 200px;
+            height: auto;
         }
 
         .modal-title {
@@ -143,7 +137,7 @@
             color: #333;
         }
 
-        #modal-close {
+        #modal-close, #welcome-close {
             margin-top: 20px;
             background-color: #ec4d58;
             color: #fafafa;
@@ -159,7 +153,7 @@
             transition: background-color 0.3s;
         }
 
-        #modal-close:hover {
+        #modal-close:hover, #welcome-close:hover {
             background-color: #d43b47;
         }
 
@@ -175,20 +169,34 @@
             color: #888;
         }
 
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
         /* Responsive styling */
         @media (max-width: 768px) {
             #dado-container {
-                width: 250px;
-                height: 250px;
+                width: 350px;
+                height: 350px;
             }
-            
-            #modal {
+
+            #modal, #welcome-modal {
                 width: 95%;
                 padding: 15px;
             }
-            
+
             .content-container {
                 gap: 15px;
+            }
+            
+            #welcome-title {
+                font-size: 2em;
             }
         }
     </style>
@@ -196,26 +204,45 @@
     <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
+    <!-- Welcome Modal -->
+    <div id="welcome-modal-container">
+        <div id="welcome-modal">
+            <h1 id="welcome-title">Mitos vs. Realidad del <span>Azúcar</span></h1>
+            <div id="logo-container">
+                <img src="logo.png" alt="Logo" />
+            </div>
+            <p>Descubre la verdad detrás de los mitos más comunes sobre el azúcar</p>
+        </div>
+        <button id="welcome-close">
+            <i class="fas fa-arrow-right"></i> Comenzar
+        </button>
+    </div>
+
     <header>
         <h1>Mitos vs. Realidad del Azúcar</h1>
         <p>Gira el dado y haz clic en un número para explorar los mitos y realidades</p>
     </header>
-    
+
     <div id="dado-container">
-        <div id="dado"></div>
+        <canvas id="dado-canvas"></canvas>
     </div>
     
+    <div class="instructions">
+        <p>Arrastra para girar • Haz clic para detener • Haz clic en un número para ver información</p>
+    </div>
+
     <div id="modal-container" class="hidden">
         <div id="modal"></div>
         <button id="modal-close">
             <i class="fas fa-times"></i> Cerrar
         </button>
     </div>
-    
+
     <footer>
         <p>Proyecto educativo sobre nutrición y azúcar</p>
     </footer>
-    
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
         // Data for myths and realities
         const mitos = [
@@ -244,151 +271,328 @@
             { nombre: "Realidad 10", contenido: "La moderación es clave. El cuerpo necesita glucosa para funcionar, pero el exceso de azúcar es perjudicial." }
         ];
 
-        // Variables for rotation
-        let angleX = 0;
-        let angleY = 0;
-        let isDragging = false;
-        let startX, startY;
-        let rotationInertia = { x: 0, y: 0 };
-        let animationFrameId;
-
-        // Create a proper icosahedron
-        function crearDado() {
-            const dado = document.getElementById('dado');
-            dado.innerHTML = '';
-            
-            // Constants for icosahedron generation
-            const phi = (1 + Math.sqrt(5)) / 2; // Golden ratio
-            const scale = 120; // Scale for better visualization
-            
-            // Create the 12 vertices of a regular icosahedron
-            const vertices = [
-                [-1, 0, phi], [1, 0, phi], [-1, 0, -phi], [1, 0, -phi],
-                [0, phi, 1], [0, phi, -1], [0, -phi, 1], [0, -phi, -1],
-                [phi, 1, 0], [phi, -1, 0], [-phi, 1, 0], [-phi, -1, 0]
-            ].map(v => v.map(coord => coord * scale / Math.sqrt(1 + phi * phi)));
-            
-            // Define the 20 faces of the icosahedron (triangles)
-            const faces = [
-                [0, 4, 1], [0, 1, 6], [1, 4, 8], [1, 8, 9], [1, 9, 6],
-                [0, 6, 11], [0, 11, 10], [0, 10, 4], [4, 10, 5], [4, 5, 8],
-                [8, 5, 3], [8, 3, 9], [9, 3, 7], [9, 7, 6], [6, 7, 11],
-                [11, 7, 2], [11, 2, 10], [10, 2, 5], [5, 2, 3], [3, 2, 7]
-            ];
-            
-            // Create each face as a triangular div
-            faces.forEach((face, index) => {
-                const [a, b, c] = face;
-                
-                // Get vertices for this face
-                const v1 = vertices[a];
-                const v2 = vertices[b];
-                const v3 = vertices[c];
-                
-                // Calculate face center
-                const centerX = (v1[0] + v2[0] + v3[0]) / 3;
-                const centerY = (v1[1] + v2[1] + v3[1]) / 3;
-                const centerZ = (v1[2] + v2[2] + v3[2]) / 3;
-                
-                // Calculate normal vector for proper orientation
-                const normal = calculateNormal(v1, v2, v3);
-                
-                // Create face element
-                const cara = document.createElement('div');
-                cara.classList.add('cara');
-                
-                // Calculate size for the triangular face
-                const side1 = Math.sqrt(
-                    Math.pow(v2[0] - v1[0], 2) + 
-                    Math.pow(v2[1] - v1[1], 2) + 
-                    Math.pow(v2[2] - v1[2], 2)
-                );
-                
-                // Set face properties
-                cara.style.width = `${side1 * 0.95}px`;
-                cara.style.height = `${side1 * 0.95}px`;
-                cara.style.clipPath = 'polygon(50% 0%, 0% 100%, 100% 100%)';
-                
-                // Position and orient the face in 3D space
-                // We need to align the normal vector with the Z axis
-                const normalLength = Math.sqrt(
-                    normal[0] * normal[0] + 
-                    normal[1] * normal[1] + 
-                    normal[2] * normal[2]
-                );
-                
-                const normalizedNormal = normal.map(n => n / normalLength);
-                
-                // Calculate rotation angles to align with normal
-                let rotX, rotY, rotZ;
-                
-                // Calculate rotation to align with normal
-                rotX = Math.atan2(normalizedNormal[1], normalizedNormal[2]) * (180 / Math.PI);
-                rotY = Math.atan2(-normalizedNormal[0], Math.sqrt(normalizedNormal[1] * normalizedNormal[1] + normalizedNormal[2] * normalizedNormal[2])) * (180 / Math.PI);
-                
-                // Apply transformation
-                cara.style.transform = `
-                    translate3d(${centerX}px, ${centerY}px, ${centerZ}px)
-                    rotateY(${rotY}deg)
-                    rotateX(${rotX}deg)
-                    rotateZ(0deg)
-                    translate3d(-50%, -50%, 0)
-                `;
-                
-                // Add number label
-                const numero = document.createElement('div');
-                numero.classList.add('cara-numero');
-                numero.textContent = (index + 1).toString();
-                cara.appendChild(numero);
-                
-                // Add click event
-                cara.addEventListener('click', () => {
-                    showModal(index + 1);
-                });
-                
-                dado.appendChild(cara);
+        // Welcome modal timing
+        setTimeout(() => {
+            document.getElementById('welcome-close').addEventListener('click', function() {
+                const welcomeModal = document.getElementById('welcome-modal-container');
+                welcomeModal.style.animation = 'fadeOut 1s ease-in-out';
+                setTimeout(() => {
+                    welcomeModal.classList.add('hidden');
+                }, 1000);
             });
+        }, 2000);
+
+        // Three.js setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color('#121212');
+        const container = document.getElementById('dado-container');
+        const width = container.offsetWidth;
+        const height = container.offsetHeight;
+        const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ 
+            canvas: document.getElementById('dado-canvas'),
+            antialias: true 
+        });
+        renderer.setSize(width, height);
+
+        // Create icosahedron
+        const radius = 150; // Larger radius
+        const geometry = new THREE.IcosahedronGeometry(radius, 0);
+        
+        // Materials
+        const wireframeMaterial = new THREE.MeshBasicMaterial({
+            color: '#ec4d58',
+            wireframe: true,
+            transparent: true,
+            opacity: 0.8,
+        });
+        
+        const faceMaterial = new THREE.MeshBasicMaterial({
+            color: '#fafafa',
+            transparent: true,
+            opacity: 0.15,
+            side: THREE.DoubleSide
+        });
+        
+        // Create mesh objects
+        const icosahedronWireframe = new THREE.Mesh(geometry, wireframeMaterial);
+        const icosahedronFaces = new THREE.Mesh(geometry, faceMaterial);
+        scene.add(icosahedronWireframe);
+        scene.add(icosahedronFaces);
+
+        // Position camera
+        camera.position.z = 400;
+
+        // Calculate face centers for an icosahedron
+        const faceCount = 20; // An icosahedron has 20 faces
+        const faceCenters = [];
+        const faceNormals = [];
+
+        // Helper function to calculate face centers and normals
+        function calculateFaceCenters() {
+            const positionAttribute = geometry.attributes.position;
+            const indices = geometry.index ? geometry.index.array : null;
+            
+            if (indices) {
+                // If we have indices, use them
+                for (let i = 0; i < indices.length; i += 3) {
+                    const a = indices[i];
+                    const b = indices[i + 1];
+                    const c = indices[i + 2];
+                    
+                    const vA = new THREE.Vector3().fromBufferAttribute(positionAttribute, a);
+                    const vB = new THREE.Vector3().fromBufferAttribute(positionAttribute, b);
+                    const vC = new THREE.Vector3().fromBufferAttribute(positionAttribute, c);
+                    
+                    // Calculate face center
+                    const faceCenter = new THREE.Vector3()
+                        .add(vA)
+                        .add(vB)
+                        .add(vC)
+                        .divideScalar(3);
+                    
+                    // Calculate face normal
+                    const edge1 = new THREE.Vector3().subVectors(vB, vA);
+                    const edge2 = new THREE.Vector3().subVectors(vC, vA);
+                    const normal = new THREE.Vector3().crossVectors(edge1, edge2).normalize();
+                    
+                    faceCenters.push({
+                        center: faceCenter.clone().normalize().multiplyScalar(radius * 1.15), // Push slightly outward
+                        faceIndex: Math.floor(i / 3)
+                    });
+                    
+                    faceNormals.push(normal);
+                }
+            } else {
+                // If no indices, calculate from vertex positions directly
+                for (let i = 0; i < positionAttribute.count; i += 3) {
+                    const vA = new THREE.Vector3().fromBufferAttribute(positionAttribute, i);
+                    const vB = new THREE.Vector3().fromBufferAttribute(positionAttribute, i + 1);
+                    const vC = new THREE.Vector3().fromBufferAttribute(positionAttribute, i + 2);
+                    
+                    // Calculate face center
+                    const faceCenter = new THREE.Vector3()
+                        .add(vA)
+                        .add(vB)
+                        .add(vC)
+                        .divideScalar(3);
+                    
+                    // Calculate face normal
+                    const edge1 = new THREE.Vector3().subVectors(vB, vA);
+                    const edge2 = new THREE.Vector3().subVectors(vC, vA);
+                    const normal = new THREE.Vector3().crossVectors(edge1, edge2).normalize();
+                    
+                    faceCenters.push({
+                        center: faceCenter.clone().normalize().multiplyScalar(radius * 1.15),
+                        faceIndex: Math.floor(i / 3)
+                    });
+                    
+                    faceNormals.push(normal);
+                }
+            }
         }
         
-        // Calculate normal vector of a triangle
-        function calculateNormal(v1, v2, v3) {
-            // Calculate two edges of the triangle
-            const edge1 = [v2[0] - v1[0], v2[1] - v1[1], v2[2] - v1[2]];
-            const edge2 = [v3[0] - v1[0], v3[1] - v1[1], v3[2] - v1[2]];
+        calculateFaceCenters();
+        
+        // Create labels for each face
+        const faceLabels = [];
+        
+        for (let i = 0; i < faceCount; i++) {
+            // Create canvas for the label
+            const canvas = document.createElement('canvas');
+            canvas.width = 128;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d');
             
-            // Cross product to get normal vector
-            return [
-                edge1[1] * edge2[2] - edge1[2] * edge2[1],
-                edge1[2] * edge2[0] - edge1[0] * edge2[2],
-                edge1[0] * edge2[1] - edge1[1] * edge2[0]
-            ];
+            // Clear canvas
+            ctx.fillStyle = 'rgba(255, 255, 255, 0)';
+            ctx.fillRect(0, 0, 128, 128);
+            
+            // Draw circle
+            ctx.beginPath();
+            ctx.arc(64, 64, 48, 0, Math.PI * 2);
+            ctx.fillStyle = '#ec4d58';
+            ctx.fill();
+            
+            // Draw number
+            ctx.font = 'bold 64px Exo 2, Arial';
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Center the number
+            const faceNum = i + 1;
+            ctx.fillText(faceNum.toString(), 64, 64);
+            
+            // Create texture from canvas
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMaterial = new THREE.SpriteMaterial({ 
+                map: texture,
+                transparent: true
+            });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            
+            // Position sprite
+            if (faceCenters[i]) {
+                sprite.position.copy(faceCenters[i].center);
+            }
+            
+            // Scale the sprite
+            sprite.scale.set(40, 40, 1);
+            
+            // Add sprite to scene
+            scene.add(sprite);
+            
+            // Store for reference
+            faceLabels.push({
+                sprite: sprite,
+                faceIndex: i
+            });
         }
+
+        // Rotation controls
+        let isDragging = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        let rotationSpeed = { x: 0, y: 0 };
+        let isAutoRotating = true;
+
+        document.getElementById('dado-canvas').addEventListener('mousedown', (event) => {
+            event.preventDefault();
+            isDragging = true;
+            isAutoRotating = false;
+            previousMousePosition = { x: event.clientX, y: event.clientY };
+        });
+
+        document.addEventListener('mousemove', (event) => {
+            if (!isDragging) return;
+
+            const deltaMove = {
+                x: event.clientX - previousMousePosition.x,
+                y: event.clientY - previousMousePosition.y,
+            };
+
+            rotationSpeed = {
+                x: deltaMove.y * 0.005,
+                y: deltaMove.x * 0.005
+            };
+
+            icosahedronWireframe.rotation.x += rotationSpeed.x;
+            icosahedronWireframe.rotation.y += rotationSpeed.y;
+            icosahedronFaces.rotation.copy(icosahedronWireframe.rotation);
+
+            previousMousePosition = { x: event.clientX, y: event.clientY };
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // Click handling for faces
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        document.getElementById('dado-canvas').addEventListener('click', (event) => {
+            if (isDragging) return; // Don't detect clicks while dragging
+            
+            // Calculate mouse position in normalized device coordinates
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            
+            // Update the picking ray with the camera and mouse position
+            raycaster.setFromCamera(mouse, camera);
+            
+            // Calculate intersections with sprites
+            const intersects = raycaster.intersectObjects(faceLabels.map(label => label.sprite));
+            
+            if (intersects.length > 0) {
+                // Find which label was clicked
+                const clickedSprite = intersects[0].object;
+                const labelIndex = faceLabels.findIndex(label => label.sprite === clickedSprite);
+                
+                if (labelIndex !== -1) {
+                    showModal(labelIndex + 1); // Add 1 for 1-based indexing
+                }
+            }
+        });
+
+        // Update sprite positions to face camera and follow die rotation
+        function updateSpritePositions() {
+            faceLabels.forEach((label, index) => {
+                const sprite = label.sprite;
+                
+                // Get the original face center position
+                const originalPos = faceCenters[index].center.clone();
+                
+                // Apply the current rotation of the icosahedron to the face center
+                const rotatedPos = originalPos.clone().applyQuaternion(icosahedronWireframe.quaternion);
+                
+                // Update sprite position to follow the rotated face
+                sprite.position.copy(rotatedPos);
+                
+                // Make sprite face the camera
+                sprite.quaternion.copy(camera.quaternion);
+                
+                // Calculate distance from camera to determine opacity
+                const distanceToCamera = rotatedPos.distanceTo(camera.position);
+                const maxDistance = 550; // Adjust based on your scene scale
+                const minDistance = 350; // Minimum distance for full opacity
+                
+                // Calculate dot product to determine if facing camera
+                const normalVector = faceNormals[index].clone().applyQuaternion(icosahedronWireframe.quaternion);
+                const dotProduct = normalVector.dot(new THREE.Vector3(0, 0, 1));
+                
+                // Combine distance and facing factors for opacity
+                let opacity = 1.0;
+                
+                // Adjust opacity based on distance (fade effect)
+                if (distanceToCamera > minDistance) {
+                    opacity = Math.max(0.2, 1 - ((distanceToCamera - minDistance) / (maxDistance - minDistance)));
+                }
+                
+                // Reduce opacity further if facing away from camera
+                if (dotProduct < 0) {
+                    opacity *= 0.5;
+                }
+                
+                sprite.material.opacity = opacity;
+            });
+        }
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Auto rotation when not being dragged
+            if (isAutoRotating) {
+                icosahedronWireframe.rotation.y += 0.003;
+                icosahedronWireframe.rotation.x += 0.001;
+                icosahedronFaces.rotation.copy(icosahedronWireframe.rotation);
+            }
+            
+            // Update sprite positions and opacity
+            updateSpritePositions();
+            
+            renderer.render(scene, camera);
+        }
+        animate();
 
         // Show modal with myth and reality information
         function showModal(faceNumber) {
             const modal = document.getElementById('modal');
             const modalContainer = document.getElementById('modal-container');
-            
-            // Determine which myth and reality to show
+
             let mitoIndex, realidadIndex;
-            
-            if (faceNumber <= 10) {
-                mitoIndex = faceNumber - 1;
-                realidadIndex = mitoIndex;
-            } else {
-                mitoIndex = faceNumber - 11;
-                if (mitoIndex >= mitos.length) {
-                    mitoIndex = mitoIndex % mitos.length;
-                }
-                realidadIndex = mitoIndex;
-            }
-            
+
+            // Calculate the right index
+            mitoIndex = (faceNumber - 1) % 10;
+            realidadIndex = mitoIndex;
+
             const mito = mitos[mitoIndex];
             const realidad = realidades[realidadIndex];
-            
-            // Create content for modal
+
             modal.innerHTML = `
-                <h2 class="modal-title">Face #${faceNumber}</h2>
+                <h2 class="modal-title">Cara #${faceNumber}</h2>
                 <div class="content-container">
                     <div class="content-box">
                         <div class="content-header">
@@ -408,129 +612,26 @@
                     </div>
                 </div>
             `;
-            
-            // Show modal
+
             modalContainer.classList.remove('hidden');
+            isAutoRotating = false; // Stop rotation when showing modal
         }
 
         // Close modal event
         document.getElementById('modal-close').addEventListener('click', () => {
             document.getElementById('modal-container').classList.add('hidden');
+            isAutoRotating = true; // Resume rotation when closing modal
         });
 
-        // Get the die element
-        const dado = document.getElementById('dado');
-
-        // Mouse events for rotation
-        dado.addEventListener('mousedown', (e) => {
-            isDragging = true;
-            startX = e.clientX;
-            startY = e.clientY;
-            rotationInertia = { x: 0, y: 0 };
-            cancelAnimationFrame(animationFrameId);
-            e.preventDefault();
-            dado.style.cursor = 'grabbing';
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            const width = container.offsetWidth;
+            const height = container.offsetHeight;
+            
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
         });
-
-        document.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            
-            const deltaX = e.clientX - startX;
-            const deltaY = e.clientY - startY;
-            
-            // Calculate rotation based on mouse movement
-            rotationInertia.x = deltaY * 0.5;
-            rotationInertia.y = deltaX * 0.5;
-            
-            angleX += deltaY * 0.5;
-            angleY += deltaX * 0.5;
-            
-            updateDieRotation();
-            
-            startX = e.clientX;
-            startY = e.clientY;
-        });
-
-        document.addEventListener('mouseup', () => {
-            if (isDragging) {
-                // Apply inertia effect
-                animateInertia();
-            }
-            isDragging = false;
-            dado.style.cursor = 'grab';
-        });
-
-        // Touch events for mobile
-        dado.addEventListener('touchstart', (e) => {
-            isDragging = true;
-            startX = e.touches[0].clientX;
-            startY = e.touches[0].clientY;
-            rotationInertia = { x: 0, y: 0 };
-            cancelAnimationFrame(animationFrameId);
-            e.preventDefault();
-        });
-
-        document.addEventListener('touchmove', (e) => {
-            if (!isDragging) return;
-            
-            const deltaX = e.touches[0].clientX - startX;
-            const deltaY = e.touches[0].clientY - startY;
-            
-            rotationInertia.x = deltaY * 0.5;
-            rotationInertia.y = deltaX * 0.5;
-            
-            angleX += deltaY * 0.5;
-            angleY += deltaX * 0.5;
-            
-            updateDieRotation();
-            
-            startX = e.touches[0].clientX;
-            startY = e.touches[0].clientY;
-            
-            e.preventDefault();
-        });
-
-        document.addEventListener('touchend', () => {
-            if (isDragging) {
-                animateInertia();
-            }
-            isDragging = false;
-        });
-
-        // Update die rotation
-        function updateDieRotation() {
-            dado.style.transform = `rotateX(${angleX}deg) rotateY(${angleY}deg)`;
-        }
-
-        // Add inertia animation for smooth rotation
-        function animateInertia() {
-            // Slow down the rotation gradually
-            rotationInertia.x *= 0.95;
-            rotationInertia.y *= 0.95;
-            
-            angleX += rotationInertia.x;
-            angleY += rotationInertia.y;
-            
-            updateDieRotation();
-            
-            // Continue animation until almost stopped
-            if (Math.abs(rotationInertia.x) > 0.01 || Math.abs(rotationInertia.y) > 0.01) {
-                animationFrameId = requestAnimationFrame(animateInertia);
-            }
-        }
-
-        // Set initial rotation for better visibility
-        angleX = 20;
-        angleY = 30;
-        updateDieRotation();
-
-        // Create the die when page loads
-        window.addEventListener('DOMContentLoaded', () => {
-            crearDado();
-        });
-
-        // Also create immediately for faster loading
-        crearDado();
     </script>
 </body>
 </html>
