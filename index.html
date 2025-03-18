@@ -67,15 +67,15 @@
         }
 
         #modal, #welcome-modal {
-            background-color: #fafafa;
-            color: #121212;
+            background-color: transparent;
+            color: #fafafa;
             width: 90%;
             max-width: 800px;
             max-height: 80vh;
             overflow-y: auto;
             border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
             padding: 20px;
+            animation: fadeIn 1.5s ease-in-out;
         }
 
         #welcome-modal {
@@ -119,10 +119,10 @@
         }
 
         .content-box {
-            background-color: #f0f0f0;
+            background-color: rgba(20, 20, 20, 0.8);
             border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
         }
 
         .content-header {
@@ -134,10 +134,10 @@
 
         .content-body {
             padding: 15px;
-            color: #333;
+            color: #ffffff;
         }
 
-        #modal-close, #welcome-close {
+        #modal-close {
             margin-top: 20px;
             background-color: #ec4d58;
             color: #fafafa;
@@ -153,7 +153,7 @@
             transition: background-color 0.3s;
         }
 
-        #modal-close:hover, #welcome-close:hover {
+        #modal-close:hover {
             background-color: #d43b47;
         }
 
@@ -207,15 +207,12 @@
     <!-- Welcome Modal -->
     <div id="welcome-modal-container">
         <div id="welcome-modal">
-            <h1 id="welcome-title">Mitos vs. Realidad del <span>Azúcar</span></h1>
+            <h1 id="welcome-title">Mitos <span>vs</span>. Realidad del <span>Azúcar</span></h1>
             <div id="logo-container">
-                <img src="logo.png" alt="Logo" />
+                <img src="logo-without-background.png" alt="Logo" />
             </div>
-            <p>Descubre la verdad detrás de los mitos más comunes sobre el azúcar</p>
+            <p>Descubre la <span>verdad</span> detrás de los mitos más comunes sobre el azúcar</p>
         </div>
-        <button id="welcome-close">
-            <i class="fas fa-arrow-right"></i> Comenzar
-        </button>
     </div>
 
     <header>
@@ -271,16 +268,14 @@
             { nombre: "Realidad 10", contenido: "La moderación es clave. El cuerpo necesita glucosa para funcionar, pero el exceso de azúcar es perjudicial." }
         ];
 
-        // Welcome modal timing
+        // Welcome modal timing - auto close after 4 seconds
         setTimeout(() => {
-            document.getElementById('welcome-close').addEventListener('click', function() {
-                const welcomeModal = document.getElementById('welcome-modal-container');
-                welcomeModal.style.animation = 'fadeOut 1s ease-in-out';
-                setTimeout(() => {
-                    welcomeModal.classList.add('hidden');
-                }, 1000);
-            });
-        }, 2000);
+            const welcomeModal = document.getElementById('welcome-modal-container');
+            welcomeModal.style.animation = 'fadeOut 1.5s ease-in-out';
+            setTimeout(() => {
+                welcomeModal.classList.add('hidden');
+            }, 1500);
+        }, 4000);
 
         // Three.js setup
         const scene = new THREE.Scene();
@@ -394,7 +389,7 @@
         
         calculateFaceCenters();
         
-        // Create labels for each face
+        // Create labels for each face - MODIFIED FOR LARGER NUMBERS AND SMALLER CIRCLES
         const faceLabels = [];
         
         for (let i = 0; i < faceCount; i++) {
@@ -408,14 +403,14 @@
             ctx.fillStyle = 'rgba(255, 255, 255, 0)';
             ctx.fillRect(0, 0, 128, 128);
             
-            // Draw circle
+            // Draw circle - making it smaller
             ctx.beginPath();
-            ctx.arc(64, 64, 48, 0, Math.PI * 2);
+            ctx.arc(64, 64, 52, 0, Math.PI * 2); // Decreased from 62 to 52
             ctx.fillStyle = '#ec4d58';
             ctx.fill();
             
-            // Draw number
-            ctx.font = 'bold 64px Exo 2, Arial';
+            // Draw number with larger font
+            ctx.font = 'bold 110px Exo 2, Arial'; // Increased from 100px to 110px
             ctx.fillStyle = 'white';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -438,7 +433,7 @@
             }
             
             // Scale the sprite
-            sprite.scale.set(40, 40, 1);
+            sprite.scale.set(60, 60, 1); // Decreased from 70 to 60 for smaller circles
             
             // Add sprite to scene
             scene.add(sprite);
@@ -516,7 +511,7 @@
             }
         });
 
-        // Update sprite positions to face camera and follow die rotation
+        // UPDATED: Improved sprite position update with smoother transition
         function updateSpritePositions() {
             faceLabels.forEach((label, index) => {
                 const sprite = label.sprite;
@@ -540,22 +535,29 @@
                 
                 // Calculate dot product to determine if facing camera
                 const normalVector = faceNormals[index].clone().applyQuaternion(icosahedronWireframe.quaternion);
-                const dotProduct = normalVector.dot(new THREE.Vector3(0, 0, 1));
+                const cameraDirection = new THREE.Vector3(0, 0, 1);
+                const dotProduct = normalVector.dot(cameraDirection);
                 
-                // Combine distance and facing factors for opacity
-                let opacity = 1.0;
+                // Improved opacity calculation with smoother transitions
                 
-                // Adjust opacity based on distance (fade effect)
+                // 1. Distance-based opacity (smooth curve instead of linear)
+                let distanceOpacity = 1.0;
                 if (distanceToCamera > minDistance) {
-                    opacity = Math.max(0.2, 1 - ((distanceToCamera - minDistance) / (maxDistance - minDistance)));
+                    // Using a smooth curve: 1 - (x^2)/(max^2)
+                    const t = (distanceToCamera - minDistance) / (maxDistance - minDistance);
+                    distanceOpacity = Math.max(0.1, 1 - (t * t));
                 }
                 
-                // Reduce opacity further if facing away from camera
-                if (dotProduct < 0) {
-                    opacity *= 0.5;
-                }
+                // 2. Direction-based opacity (smoother transition based on face angle)
+                // Convert dot product to a 0-1 range (dot product ranges from -1 to 1)
+                const directionOpacity = (dotProduct + 1) / 2;
                 
-                sprite.material.opacity = opacity;
+                // Combine both factors with weights
+                // Give more weight to the direction for a smoother effect
+                const combinedOpacity = distanceOpacity * 0.3 + directionOpacity * 0.7;
+                
+                // Apply the final opacity with a minimum value to ensure some visibility
+                sprite.material.opacity = Math.max(0.1, combinedOpacity);
             });
         }
 
@@ -577,7 +579,7 @@
         }
         animate();
 
-        // Show modal with myth and reality information
+        // Show modal with myth and reality information with fade in effect - UPDATED TO REMOVE NUMBERS
         function showModal(faceNumber) {
             const modal = document.getElementById('modal');
             const modalContainer = document.getElementById('modal-container');
@@ -596,7 +598,7 @@
                 <div class="content-container">
                     <div class="content-box">
                         <div class="content-header">
-                            ${mito.nombre}
+                            Mito
                         </div>
                         <div class="content-body">
                             <p>${mito.contenido}</p>
@@ -604,7 +606,7 @@
                     </div>
                     <div class="content-box">
                         <div class="content-header">
-                            ${realidad.nombre}
+                            Realidad
                         </div>
                         <div class="content-body">
                             <p>${realidad.contenido}</p>
@@ -614,13 +616,21 @@
             `;
 
             modalContainer.classList.remove('hidden');
+            modal.style.animation = 'fadeIn 1s ease-in-out';
             isAutoRotating = false; // Stop rotation when showing modal
         }
 
-        // Close modal event
+        // Close modal event with fade out
         document.getElementById('modal-close').addEventListener('click', () => {
-            document.getElementById('modal-container').classList.add('hidden');
-            isAutoRotating = true; // Resume rotation when closing modal
+            const modal = document.getElementById('modal');
+            const modalContainer = document.getElementById('modal-container');
+            
+            modal.style.animation = 'fadeOut 1s ease-in-out';
+            
+            setTimeout(() => {
+                modalContainer.classList.add('hidden');
+                isAutoRotating = true; // Resume rotation when closing modal
+            }, 1000);
         });
 
         // Handle window resize
